@@ -28,9 +28,14 @@ public class CS2PracticeMod : BasePlugin
 
     // Liste pour stocker les bots ajoutés
     private List<CCSPlayerController> botPlayers = new List<CCSPlayerController>();
+    
+    // Dictionnaire pour stocker les positions et angles originaux des bots
+    private Dictionary<CCSPlayerController, (Vector position, QAngle angles)> botOriginalPositions = new Dictionary<CCSPlayerController, (Vector, QAngle)>();
 
     // Variables globales pour suivre les événements
     private Dictionary<CCSPlayerController, float> playerFlashDuration = new Dictionary<CCSPlayerController, float>();
+    private Dictionary<CCSPlayerController, long> lastDamageMessageTime = new Dictionary<CCSPlayerController, long>();
+    private Dictionary<CCSPlayerController, long> lastFlashMessageTime = new Dictionary<CCSPlayerController, long>();
 
     public override void Load(bool hotReload)
     {
@@ -40,6 +45,7 @@ public class CS2PracticeMod : BasePlugin
         RegisterEventHandler<EventPlayerDeath>(OnPlayerDeath);
         RegisterEventHandler<EventPlayerHurt>(OnPlayerHurt);
         RegisterEventHandler<EventPlayerBlind>(OnPlayerBlind);
+        RegisterEventHandler<EventPlayerSpawn>(OnPlayerSpawn);
         
         Console.WriteLine(@"
    _____  _____ ___      _____  _____            _____ _______ _____ _____ ______     __  __  ____  _____  
@@ -821,7 +827,7 @@ public class CS2PracticeMod : BasePlugin
                 Console.WriteLine($"Placing bot {newBot.PlayerName} at player's exact position");
                 
                 // Téléporter le bot à la position exacte du joueur avec le même angle de vue
-                newBot.PlayerPawn.Value.Teleport(position, angles, new Vector(0, 0, 0));
+                newBot.PlayerPawn.Value.Teleport(new Vector(position.X, position.Y, position.Z), new QAngle(angles.X, angles.Y, angles.Z), new Vector(0, 0, 0));
                 
                 // Téléporter le joueur à côté du bot et légèrement en hauteur pour éviter d'être dans le sol
                 // Calculer une position à côté du joueur (à environ 50 unités de distance)
@@ -861,6 +867,13 @@ public class CS2PracticeMod : BasePlugin
                 
                 // Ajouter le bot à notre liste
                 botPlayers.Add(newBot);
+                
+                // Stocker la position et l'angle originaux du bot
+                Vector botPosition = new Vector(position.X, position.Y, position.Z);
+                QAngle botAngles = new QAngle(angles.X, angles.Y, angles.Z);
+                botOriginalPositions[newBot] = (botPosition, botAngles);
+                
+                Console.WriteLine($"Saved original position for bot {newBot.PlayerName}: {botPosition}, angles: {botAngles}");
                 
                 Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Added bot \u0007{newBot.PlayerName}\u0001 at your position!");
                 Console.WriteLine($"Successfully added bot {newBot.PlayerName} at position {position} and moved player to {playerNewPosition}");
@@ -906,6 +919,12 @@ public class CS2PracticeMod : BasePlugin
             // Retirer le bot de notre liste
             botPlayers.RemoveAt(botPlayers.Count - 1);
             
+            // Retirer également la position et l'angle originaux du bot
+            if (botOriginalPositions.ContainsKey(botToRemove))
+            {
+                botOriginalPositions.Remove(botToRemove);
+            }
+            
             Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Removed bot \u0007{botName}\u0001!");
             Console.WriteLine($"Removed bot {botName}");
         }
@@ -943,6 +962,9 @@ public class CS2PracticeMod : BasePlugin
         
         // Vider notre liste de bots
         botPlayers.Clear();
+        
+        // Vider également le dictionnaire des positions et angles originaux des bots
+        botOriginalPositions.Clear();
         
         Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Removed all \u0007{botCount}\u0001 bots!");
         Console.WriteLine($"Removed all {botCount} bots");
@@ -1121,17 +1143,19 @@ public class CS2PracticeMod : BasePlugin
     }
 
     // Event handler for player death to give them weapons when they respawn
-    private HookResult OnPlayerDeath(EventPlayerDeath @event, GameEventInfo info)
+    [GameEventHandler]
+    public HookResult OnPlayerDeath(EventPlayerDeath @event, GameEventInfo info)
     {
         if (!practiceMode) return HookResult.Continue;
         
-        var player = @event.Userid;
-        if (player == null || !player.IsValid) return HookResult.Continue;
+        CCSPlayerController player = @event.Userid;
         
-        // Give weapons to player after a short delay to ensure they've respawned
-        AddTimer(0.5f, () => 
-        {
-            if (player != null && player.IsValid && player.PawnIsAlive)
+        // Afficher un message de mort dans le chat
+        Server.ExecuteCommand($"mp_disable_autokick {player.UserId}");
+        
+        // Donner des armes au joueur lors de son prochain spawn
+        AddTimer(0.1f, () => {
+            if (player != null && player.IsValid && !player.IsBot)
             {
                 GivePlayerWeapons(player);
             }
@@ -1160,14 +1184,22 @@ public class CS2PracticeMod : BasePlugin
             if (weaponName.Contains("hegrenade") || weaponName.Contains("molotov") || 
                 weaponName.Contains("incgrenade") || weaponName.Contains("decoy"))
             {
-                // Afficher les informations sur les dégâts dans le chat
-                if (attacker != null && attacker.IsValid)
+                // Vérifier si un message a été envoyé récemment pour ce bot (limiter à un message toutes les 500ms)
+                long currentTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+                if (!lastDamageMessageTime.ContainsKey(victim) || currentTime - lastDamageMessageTime[victim] > 500)
                 {
-                    Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Bot \u0007{victim.PlayerName}\u0001 a pris \u0007{damage}\u0001 dégâts de {weaponName} ({healthRemaining} HP restants)");
-                }
-                else
-                {
-                    Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Bot \u0007{victim.PlayerName}\u0001 a pris \u0007{damage}\u0001 dégâts ({healthRemaining} HP restants)");
+                    // Afficher les informations sur les dégâts dans le chat
+                    if (attacker != null && attacker.IsValid)
+                    {
+                        Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Bot \u0007{victim.PlayerName}\u0001 a pris \u0007{damage}\u0001 dégâts de {weaponName} ({healthRemaining} HP restants)");
+                    }
+                    else
+                    {
+                        Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Bot \u0007{victim.PlayerName}\u0001 a pris \u0007{damage}\u0001 dégâts ({healthRemaining} HP restants)");
+                    }
+                    
+                    // Mettre à jour le timestamp du dernier message
+                    lastDamageMessageTime[victim] = currentTime;
                 }
             }
         }
@@ -1186,14 +1218,80 @@ public class CS2PracticeMod : BasePlugin
         // Vérifier si le joueur aveugle est un bot que nous avons ajouté
         if (player != null && player.IsBot && botPlayers.Contains(player))
         {
-            // Enregistrer la durée du flash
-            playerFlashDuration[player] = duration;
-            
-            // Afficher la durée du flash dans le chat
-            Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Bot \u0007{player.PlayerName}\u0001 a été aveuglé pendant \u0007{duration:F1}\u0001 secondes");
+            // Vérifier si un message a été envoyé récemment pour ce bot (limiter à un message toutes les 500ms)
+            long currentTime = DateTimeOffset.Now.ToUnixTimeMilliseconds();
+            if (!lastFlashMessageTime.ContainsKey(player) || currentTime - lastFlashMessageTime[player] > 500)
+            {
+                // Enregistrer la durée du flash
+                playerFlashDuration[player] = duration;
+                
+                // Afficher la durée du flash dans le chat
+                Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Bot \u0007{player.PlayerName}\u0001 a été aveuglé pendant \u0007{duration:F1}\u0001 secondes");
+                
+                // Mettre à jour le timestamp du dernier message
+                lastFlashMessageTime[player] = currentTime;
+            }
         }
         
         return HookResult.Continue;
+    }
+
+    // Gestionnaire d'événement pour le spawn des joueurs
+    [GameEventHandler]
+    public HookResult OnPlayerSpawn(EventPlayerSpawn @event, GameEventInfo info)
+    {
+        if (!practiceMode) return HookResult.Continue;
+        
+        CCSPlayerController player = @event.Userid;
+        
+        // Vérifier si le joueur qui spawn est un bot que nous avons ajouté
+        if (player != null && player.IsBot && botPlayers.Contains(player))
+        {
+            Console.WriteLine($"Bot {player.PlayerName} spawned, will teleport to original position");
+            
+            // Attendre un court instant pour s'assurer que le bot est complètement spawné
+            AddTimer(0.5f, () => {
+                if (RespawnBotAtOriginalPosition(player))
+                {
+                    // Afficher un message dans le chat seulement si la téléportation a réussi
+                    Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Bot \u0007{player.PlayerName}\u0001 a respawné à sa position originale");
+                }
+            });
+        }
+        
+        return HookResult.Continue;
+    }
+    
+    // Méthode pour faire respawn un bot à sa position originale
+    // Retourne true si la téléportation a réussi, false sinon
+    private bool RespawnBotAtOriginalPosition(CCSPlayerController bot)
+    {
+        // Vérifier si le bot est toujours valide et si nous avons sa position originale
+        if (bot != null && bot.IsValid && bot.PlayerPawn != null && bot.PlayerPawn.IsValid && 
+            botOriginalPositions.ContainsKey(bot))
+        {
+            var (originalPosition, originalAngles) = botOriginalPositions[bot];
+            
+            Console.WriteLine($"Teleporting bot {bot.PlayerName} to original position {originalPosition}, angles: {originalAngles}");
+            
+            // Téléporter le bot à sa position originale
+            bot.PlayerPawn.Value.Teleport(new Vector(originalPosition.X, originalPosition.Y, originalPosition.Z), new QAngle(originalAngles.X, originalAngles.Y, originalAngles.Z), new Vector(0, 0, 0));
+            
+            return true;
+        }
+        else
+        {
+            if (bot == null)
+            {
+                Console.WriteLine("Failed to teleport bot: bot is null");
+            }
+            else
+            {
+                Console.WriteLine($"Failed to teleport bot {bot.PlayerName}: Valid={bot.IsValid}, PawnValid={(bot.PlayerPawn != null && bot.PlayerPawn.IsValid)}, HasOriginalPosition={botOriginalPositions.ContainsKey(bot)}");
+            }
+            
+            return false;
+        }
     }
 
     // Méthode pour donner des armes au joueur
