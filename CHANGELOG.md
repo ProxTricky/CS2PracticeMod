@@ -40,3 +40,13 @@
 - Add bot control features
 - Develop team practice utilities
 - Create round state saving and restoration
+
+## [2.0.0] - 2025-03-08
+
+### Added
+- Bot management system:
+  - `!addbot` / `css_addbot` - Add a bot at your current position
+  - `!delbot` / `css_delbot` - Remove the last added bot
+  - `!delbots` / `css_delbots` - Remove all added bots
+- Bots are placed exactly at the player's position and do not move
+- Bots are automatically assigned to the same team as the player

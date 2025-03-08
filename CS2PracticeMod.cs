@@ -14,7 +14,7 @@ namespace CS2PracticeMod;
 public class CS2PracticeMod : BasePlugin
 {
     public override string ModuleName => "CS2 Practice Mod";
-    public override string ModuleVersion => "1.0.0";
+    public override string ModuleVersion => "2.0.0";
     public override string ModuleAuthor => "Your Name";
     public override string ModuleDescription => "A comprehensive practice mod for CS2";
 
@@ -25,6 +25,9 @@ public class CS2PracticeMod : BasePlugin
     // Dossier pour stocker les positions sauvegardées
     private string savedPositionsFolder = "saved_positions";
     private bool practiceMode = false;
+
+    // Liste pour stocker les bots ajoutés
+    private List<CCSPlayerController> botPlayers = new List<CCSPlayerController>();
 
     public override void Load(bool hotReload)
     {
@@ -738,6 +741,165 @@ public class CS2PracticeMod : BasePlugin
         {
             Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Position \u0007{posName}\u0001 not found for map {Server.MapName}!");
         }
+    }
+    
+    [ConsoleCommand("css_addbot", "Add a bot at your current position")]
+    [ConsoleCommand("!addbot", "Add a bot at your current position")]
+    public void OnCommandAddBot(CCSPlayerController? player, CommandInfo command)
+    {
+        Console.WriteLine("css_addbot command received");
+        
+        // Try to find the player who issued the command
+        if (player == null)
+        {
+            // For chat commands, try to get the player from the command
+            string cmdName = command.GetArg(0).ToLower();
+            if (cmdName.StartsWith("!") && Utilities.GetPlayers().Count > 0)
+            {
+                // For chat commands, get the first active player as a fallback
+                player = Utilities.GetPlayers().FirstOrDefault(p => p != null && p.IsValid);
+                Console.WriteLine($"Chat command detected, using player: {(player != null ? player.PlayerName : "none found")}");
+            }
+            
+            if (player == null)
+            {
+                Console.WriteLine("No valid player found for addbot command");
+                Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 AddBot command must be run by a player!");
+                return;
+            }
+        }
+        
+        if (!practiceMode)
+        {
+            Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Practice mode must be enabled first!");
+            return;
+        }
+
+        // Obtenir la position et l'angle du joueur
+        if (player.PlayerPawn.Value == null || player.PlayerPawn.Value.CBodyComponent?.SceneNode == null)
+        {
+            Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Cannot get player position!");
+            return;
+        }
+
+        Vector position = player.PlayerPawn.Value.CBodyComponent.SceneNode.AbsOrigin;
+        QAngle angles = player.PlayerPawn.Value.EyeAngles;
+        
+        // Ajouter un bot à la position actuelle
+        string botName = $"PracticeBot_{botPlayers.Count + 1}";
+        string team = player.TeamNum == 2 ? "T" : "CT";
+        
+        // Ajouter le bot avec la commande du serveur
+        Server.ExecuteCommand($"bot_add {team} {botName}");
+        
+        // Attendre un peu que le bot soit créé
+        AddTimer(0.5f, () => {
+            // Trouver le bot nouvellement créé
+            var newBot = Utilities.GetPlayers()
+                .FirstOrDefault(p => p != null && p.IsValid && p.IsBot && !botPlayers.Contains(p));
+            
+            if (newBot != null)
+            {
+                // Téléporter le bot à la position du joueur
+                if (newBot.PlayerPawn.Value != null)
+                {
+                    // Téléporter le bot à la position exacte du joueur
+                    newBot.PlayerPawn.Value.Teleport(position, angles, new Vector(0, 0, 0));
+                    
+                    // Empêcher le bot de bouger
+                    Server.ExecuteCommand($"bot_stop 1");
+                    
+                    // Ajouter le bot à notre liste
+                    botPlayers.Add(newBot);
+                    
+                    Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Added bot \u0007{newBot.PlayerName}\u0001 at your position!");
+                    Console.WriteLine($"Added bot {newBot.PlayerName} at position {position}");
+                }
+                else
+                {
+                    Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Failed to teleport bot!");
+                }
+            }
+            else
+            {
+                Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Failed to find newly created bot!");
+            }
+        });
+    }
+    
+    [ConsoleCommand("css_delbot", "Remove the last added bot")]
+    [ConsoleCommand("!delbot", "Remove the last added bot")]
+    public void OnCommandDelBot(CCSPlayerController? player, CommandInfo command)
+    {
+        Console.WriteLine("css_delbot command received");
+        
+        if (!practiceMode)
+        {
+            Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Practice mode must be enabled first!");
+            return;
+        }
+
+        // Vérifier s'il y a des bots à supprimer
+        if (botPlayers.Count == 0)
+        {
+            Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 No bots to remove!");
+            return;
+        }
+
+        // Prendre le dernier bot ajouté
+        var botToRemove = botPlayers[botPlayers.Count - 1];
+        
+        // Vérifier si le bot est toujours valide
+        if (botToRemove != null && botToRemove.IsValid)
+        {
+            string botName = botToRemove.PlayerName;
+            
+            // Supprimer le bot
+            Server.ExecuteCommand($"bot_kick {botName}");
+            
+            // Retirer le bot de notre liste
+            botPlayers.RemoveAt(botPlayers.Count - 1);
+            
+            Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Removed bot \u0007{botName}\u0001!");
+            Console.WriteLine($"Removed bot {botName}");
+        }
+        else
+        {
+            // Si le bot n'est plus valide, le retirer de la liste quand même
+            botPlayers.RemoveAt(botPlayers.Count - 1);
+            Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Bot was already removed!");
+        }
+    }
+    
+    [ConsoleCommand("css_delbots", "Remove all added bots")]
+    [ConsoleCommand("!delbots", "Remove all added bots")]
+    public void OnCommandDelAllBots(CCSPlayerController? player, CommandInfo command)
+    {
+        Console.WriteLine("css_delbots command received");
+        
+        if (!practiceMode)
+        {
+            Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Practice mode must be enabled first!");
+            return;
+        }
+
+        // Vérifier s'il y a des bots à supprimer
+        if (botPlayers.Count == 0)
+        {
+            Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 No bots to remove!");
+            return;
+        }
+
+        int botCount = botPlayers.Count;
+        
+        // Supprimer tous les bots
+        Server.ExecuteCommand("bot_kick all");
+        
+        // Vider notre liste de bots
+        botPlayers.Clear();
+        
+        Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Removed all \u0007{botCount}\u0001 bots!");
+        Console.WriteLine($"Removed all {botCount} bots");
     }
     
     // Méthode pour supprimer un fichier de position

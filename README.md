@@ -35,6 +35,11 @@ CS2 Practice Mod enhances the practice experience on CS2 servers by providing es
   - Persistent storage across server restarts
   - Includes player position, view angles, and weapon
 
+- **Bot Control**: Place and manage bots for practice scenarios
+  - Add bots at your exact position
+  - Remove individual bots or all bots at once
+  - Bots remain stationary for consistent practice
+
 - **Noclip**: Easily navigate through the map to explore strategies
 
 - **Auto-Equipment**: Automatically receive essential weapons and utilities
@@ -49,6 +54,12 @@ CS2 Practice Mod enhances the practice experience on CS2 servers by providing es
 - [x] **Position Deletion**: Delete saved positions
 - [x] **Auto Equipment**: Automatically receive weapons and grenades
 
+### Bot Control
+- [x] **Bot Placement**: Place bots at specific positions
+- [x] **Bot Removal**: Remove individual or all bots
+- [ ] **Bot Mimic**: Make bots mimic player actions
+- [ ] **Bot Grenades**: Make bots throw specific grenades
+
 ### Grenade Practice
 - [ ] **Grenade Trajectories**: Show the path of thrown grenades
 - [ ] **Grenade Saving**: Save thrown grenades for later practice
@@ -60,11 +71,6 @@ CS2 Practice Mod enhances the practice experience on CS2 servers by providing es
 - [ ] **Team Loading**: Load positions for an entire team
 - [ ] **Executes**: Practice site executes with bots
 - [ ] **Strat Roulette**: Randomly select from predefined strategies
-
-### Bot Control
-- [ ] **Bot Placement**: Place bots at specific positions
-- [ ] **Bot Mimic**: Make bots mimic player actions
-- [ ] **Bot Grenades**: Make bots throw specific grenades
 
 ### Match Simulation
 - [ ] **Fake Flashes**: Simulate flashbangs without actually blinding players
@@ -120,6 +126,9 @@ For a complete installation guide including server setup, see the [Installation 
 | `!save <name>` | `css_save <name>` | Save current position |
 | `!load <name>` | `css_load <name>` | Load saved position |
 | `!delete <name>` | `css_delete <name>` | Delete a saved position |
+| `!addbot` | `css_addbot` | Add a bot at your current position |
+| `!delbot` | `css_delbot` | Remove the last added bot |
+| `!delbots` | `css_delbots` | Remove all added bots |
 
 ## ⚙️ Configuration
 
