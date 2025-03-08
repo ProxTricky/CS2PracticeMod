@@ -29,12 +29,17 @@ public class CS2PracticeMod : BasePlugin
     // Liste pour stocker les bots ajoutés
     private List<CCSPlayerController> botPlayers = new List<CCSPlayerController>();
 
+    // Variables globales pour suivre les événements
+    private Dictionary<CCSPlayerController, float> playerFlashDuration = new Dictionary<CCSPlayerController, float>();
+
     public override void Load(bool hotReload)
     {
         // Commands are registered via attributes now, no need to call AddCommand
         
         // Register event handlers
         RegisterEventHandler<EventPlayerDeath>(OnPlayerDeath);
+        RegisterEventHandler<EventPlayerHurt>(OnPlayerHurt);
+        RegisterEventHandler<EventPlayerBlind>(OnPlayerBlind);
         
         Console.WriteLine(@"
    _____  _____ ___      _____  _____            _____ _______ _____ _____ ______     __  __  ____  _____  
@@ -785,44 +790,85 @@ public class CS2PracticeMod : BasePlugin
         Vector position = player.PlayerPawn.Value.CBodyComponent.SceneNode.AbsOrigin;
         QAngle angles = player.PlayerPawn.Value.EyeAngles;
         
-        // Ajouter un bot à la position actuelle
-        string botName = $"PracticeBot_{botPlayers.Count + 1}";
-        string team = player.TeamNum == 2 ? "T" : "CT";
+        // Enregistrer les bots actuels pour pouvoir identifier le nouveau
+        var currentBots = Utilities.GetPlayers().Where(p => p != null && p.IsValid && p.IsBot).ToList();
         
-        // Ajouter le bot avec la commande du serveur
-        Server.ExecuteCommand($"bot_add {team} {botName}");
+        // Ajouter un bot dans l'équipe ennemie
+        string enemyTeam = player.TeamNum == 2 ? "CT" : "T";
+        Server.ExecuteCommand("sv_cheats 1");
+        Server.ExecuteCommand("mp_limitteams 0");
+        Server.ExecuteCommand("mp_autoteambalance 0");
+        Server.ExecuteCommand($"bot_join_team {enemyTeam}");
+        Server.ExecuteCommand("bot_add"); // Ajouter un bot sans spécifier de nom
+        
+        // Afficher un message de débogage
+        Console.WriteLine($"Attempting to add a bot to enemy team {enemyTeam}");
+        Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Adding a bot to the enemy team...");
         
         // Attendre un peu que le bot soit créé
-        AddTimer(0.5f, () => {
-            // Trouver le bot nouvellement créé
-            var newBot = Utilities.GetPlayers()
-                .FirstOrDefault(p => p != null && p.IsValid && p.IsBot && !botPlayers.Contains(p));
+        AddTimer(2.0f, () => {
+            // Trouver le bot nouvellement créé en comparant avec la liste précédente
+            var allCurrentBots = Utilities.GetPlayers().Where(p => p != null && p.IsValid && p.IsBot).ToList();
+            var newBots = allCurrentBots.Except(currentBots).ToList();
             
-            if (newBot != null)
+            Console.WriteLine($"Found {newBots.Count} new bots");
+            
+            if (newBots.Count > 0)
             {
-                // Téléporter le bot à la position du joueur
-                if (newBot.PlayerPawn.Value != null)
+                var newBot = newBots.First();
+                
+                // Placer le bot exactement à la position du joueur
+                Console.WriteLine($"Placing bot {newBot.PlayerName} at player's exact position");
+                
+                // Téléporter le bot à la position exacte du joueur avec le même angle de vue
+                newBot.PlayerPawn.Value.Teleport(position, angles, new Vector(0, 0, 0));
+                
+                // Téléporter le joueur à côté du bot et légèrement en hauteur pour éviter d'être dans le sol
+                // Calculer une position à côté du joueur (à environ 50 unités de distance)
+                Vector sideways = new Vector();
+                
+                // Calculer un vecteur perpendiculaire à la direction du joueur (vers la droite)
+                // Utiliser un angle fixe pour éviter les problèmes avec l'angle du joueur
+                float yawRadians = 0.0f * (float)Math.PI / 180.0f;
+                sideways.X = (float)Math.Cos(yawRadians + Math.PI/2) * 50.0f;
+                sideways.Y = (float)Math.Sin(yawRadians + Math.PI/2) * 50.0f;
+                sideways.Z = 0;
+                
+                // Calculer la position à côté du joueur, avec un léger décalage vers le haut
+                Vector playerNewPosition = new Vector
                 {
-                    // Téléporter le bot à la position exacte du joueur
-                    newBot.PlayerPawn.Value.Teleport(position, angles, new Vector(0, 0, 0));
-                    
-                    // Empêcher le bot de bouger
-                    Server.ExecuteCommand($"bot_stop 1");
-                    
-                    // Ajouter le bot à notre liste
-                    botPlayers.Add(newBot);
-                    
-                    Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Added bot \u0007{newBot.PlayerName}\u0001 at your position!");
-                    Console.WriteLine($"Added bot {newBot.PlayerName} at position {position}");
-                }
-                else
-                {
-                    Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Failed to teleport bot!");
-                }
+                    X = position.X + sideways.X,
+                    Y = position.Y + sideways.Y,
+                    Z = position.Z + 5.0f // Légèrement au-dessus pour éviter d'être dans le sol
+                };
+                
+                // Téléporter le joueur à côté du bot
+                player.PlayerPawn.Value.Teleport(playerNewPosition, angles, new Vector(0, 0, 0));
+                
+                // Désactiver temporairement les collisions entre le joueur et le bot
+                // Cela permet d'éviter les problèmes si le joueur est toujours partiellement dans le bot
+                Server.ExecuteCommand("sv_cheats 1");
+                Server.ExecuteCommand("phys_pushscale 0"); // Désactiver les collisions physiques
+                
+                // Réactiver les collisions après un court délai
+                AddTimer(0.5f, () => {
+                    Server.ExecuteCommand("phys_pushscale 1"); // Réactiver les collisions physiques
+                });
+                
+                // Empêcher le bot de bouger
+                Server.ExecuteCommand("bot_stop 1");
+                Server.ExecuteCommand("bot_freeze 1");
+                
+                // Ajouter le bot à notre liste
+                botPlayers.Add(newBot);
+                
+                Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Added bot \u0007{newBot.PlayerName}\u0001 at your position!");
+                Console.WriteLine($"Successfully added bot {newBot.PlayerName} at position {position} and moved player to {playerNewPosition}");
             }
             else
             {
                 Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Failed to find newly created bot!");
+                Console.WriteLine("No new bots found after bot_add command");
             }
         });
     }
@@ -1090,6 +1136,62 @@ public class CS2PracticeMod : BasePlugin
                 GivePlayerWeapons(player);
             }
         });
+        
+        return HookResult.Continue;
+    }
+
+    // Hook les événements pour les grenades et flashs
+    [GameEventHandler]
+    public HookResult OnPlayerHurt(EventPlayerHurt @event, GameEventInfo info)
+    {
+        if (!practiceMode) return HookResult.Continue;
+        
+        CCSPlayerController victim = @event.Userid;
+        CCSPlayerController attacker = @event.Attacker;
+        
+        // Vérifier si la victime est un bot que nous avons ajouté
+        if (victim != null && victim.IsBot && botPlayers.Contains(victim))
+        {
+            string weaponName = @event.Weapon;
+            int damage = @event.DmgHealth;
+            int healthRemaining = @event.Health;
+            
+            // Vérifier si les dégâts proviennent d'une grenade
+            if (weaponName.Contains("hegrenade") || weaponName.Contains("molotov") || 
+                weaponName.Contains("incgrenade") || weaponName.Contains("decoy"))
+            {
+                // Afficher les informations sur les dégâts dans le chat
+                if (attacker != null && attacker.IsValid)
+                {
+                    Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Bot \u0007{victim.PlayerName}\u0001 a pris \u0007{damage}\u0001 dégâts de {weaponName} ({healthRemaining} HP restants)");
+                }
+                else
+                {
+                    Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Bot \u0007{victim.PlayerName}\u0001 a pris \u0007{damage}\u0001 dégâts ({healthRemaining} HP restants)");
+                }
+            }
+        }
+        
+        return HookResult.Continue;
+    }
+    
+    [GameEventHandler]
+    public HookResult OnPlayerBlind(EventPlayerBlind @event, GameEventInfo info)
+    {
+        if (!practiceMode) return HookResult.Continue;
+        
+        CCSPlayerController player = @event.Userid;
+        float duration = @event.BlindDuration;
+        
+        // Vérifier si le joueur aveugle est un bot que nous avons ajouté
+        if (player != null && player.IsBot && botPlayers.Contains(player))
+        {
+            // Enregistrer la durée du flash
+            playerFlashDuration[player] = duration;
+            
+            // Afficher la durée du flash dans le chat
+            Server.PrintToChatAll($" \u0004[Practice Mod]\u0001 Bot \u0007{player.PlayerName}\u0001 a été aveuglé pendant \u0007{duration:F1}\u0001 secondes");
+        }
         
         return HookResult.Continue;
     }

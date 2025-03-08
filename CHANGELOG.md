@@ -41,12 +41,21 @@
 - Develop team practice utilities
 - Create round state saving and restoration
 
+## [2.0.1] - 2025-03-08
+### Added
+- Bot Management System improvements:
+  - Bots now look in the same direction as the player
+  - Bot damage information display in chat (grenade damage)
+  - Bot flash duration information display in chat
+
 ## [2.0.0] - 2025-03-08
 
 ### Added
-- Bot management system:
-  - `!addbot` / `css_addbot` - Add a bot at your current position
-  - `!delbot` / `css_delbot` - Remove the last added bot
-  - `!delbots` / `css_delbots` - Remove all added bots
+- Bot Management System
+  - `!addbot` / `css_addbot`: Adds a bot at the player's current position with the same view angle
+  - `!delbot` / `css_delbot`: Removes the last added bot
+  - `!delbots` / `css_delbots`: Removes all added bots
+  - Bot damage information display in chat (grenade damage)
+  - Bot flash duration information display in chat
 - Bots are placed exactly at the player's position and do not move
 - Bots are automatically assigned to the same team as the player
