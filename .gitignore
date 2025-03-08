@@ -192,6 +192,9 @@ publish/
 # in these scripts will be unencrypted
 PublishScripts/
 
+# Local scripts
+publish.ps1
+
 # NuGet Packages
 *.nupkg
 # NuGet Symbol Packages

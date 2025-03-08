@@ -1,15 +1,45 @@
-# CS2 Practice Mod
+<div align="center">
 
-A practice mod for Counter-Strike 2, inspired by [splewis's practice mod](https://github.com/splewis/csgo-practice-mode) for CS:GO. Built using [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp) and [MetaMod:Source](https://www.sourcemm.net/).
+# 🎮 CS2 Practice Mod
 
-## Credits
+[![GitHub release (latest by date)](https://img.shields.io/github/v/release/ProxTricky/CS2PracticeMod)](https://github.com/ProxTricky/CS2PracticeMod/releases/latest)
+[![GitHub license](https://img.shields.io/github/license/ProxTricky/CS2PracticeMod)](https://github.com/ProxTricky/CS2PracticeMod/blob/main/LICENSE)
 
-This mod would not be possible without the amazing work of:
-- **splewis** - Creator of the original [Practice Mode](https://github.com/splewis/csgo-practice-mode) plugin for CS:GO/SourceMod
-- **roflmuffin** - Developer of [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp)
-- **MetaMod:Source Team** - For their [MetaMod:Source](https://www.sourcemm.net/) extension system
+**A comprehensive practice mode plugin for Counter-Strike 2 dedicated servers.**
 
-## Features & Roadmap
+[Key Features](#-key-features) • 
+[Installation](#-installation) • 
+[Commands](#-commands) • 
+[Roadmap](#-roadmap) • 
+[Contributing](#-contributing)
+
+<img src="https://raw.githubusercontent.com/ProxTricky/CS2PracticeMod/main/assets/Banner.png" alt="CS2 Practice Mod Banner" width="650">
+
+</div>
+
+## 📋 Overview
+
+CS2 Practice Mod enhances the practice experience on CS2 servers by providing essential tools for individual and team practice sessions. Inspired by [splewis's popular CS:GO practice mode](https://github.com/splewis/csgo-practice-mode), this plugin brings similar functionality to CS2 using CounterStrikeSharp and MetaMod:Source.
+
+## ✨ Key Features
+
+- **Practice Mode**: Toggle server settings optimized for practice
+  - Unlimited money
+  - Extended round time
+  - Infinite ammo
+  - No freeze time
+  - Buy anywhere
+  - Cheats enabled
+
+- **Position System**: Save, load, and delete positions with associated weapons
+  - Persistent storage across server restarts
+  - Includes player position, view angles, and weapon
+
+- **Noclip**: Easily navigate through the map to explore strategies
+
+- **Auto-Equipment**: Automatically receive essential weapons and utilities
+
+## 🚀 Roadmap
 
 ### Core Features
 - [x] **Practice Mode**: Toggle practice mode with extended round time, infinite ammo, etc.
@@ -47,7 +77,41 @@ This mod would not be possible without the amazing work of:
 - [ ] **Bullet Impacts**: Show where bullets hit
 - [ ] **Smoke Outlines**: Show outlines of smoke grenades
 
-## Commands
+## 💻 Installation
+
+### Prerequisites
+
+- Linux server running Counter-Strike 2 dedicated server
+- [MetaMod:Source](https://www.metamodsource.net/)
+- [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp) (v80 or higher)
+- .NET 7.0 SDK
+
+### Quick Install
+
+1. **Download the latest release** from the [Releases page](https://github.com/ProxTricky/CS2PracticeMod/releases)
+
+2. **Extract the files** to your CS2 server:
+   ```bash
+   # Navigate to CounterStrikeSharp plugins directory
+   cd ~/cs2-server/game/csgo/addons/counterstrikesharp/plugins
+   
+   # Create directory for practice mod
+   mkdir cs2-practice-mod
+   cd cs2-practice-mod
+   
+   # Extract the downloaded zip file here
+   ```
+
+3. **Restart your server** or reload plugins with:
+   ```
+   css_plugins_reload
+   ```
+
+### Detailed Installation Guide
+
+For a complete installation guide including server setup, see the [Installation Wiki](https://github.com/ProxTricky/CS2PracticeMod/wiki/Installation).
+
+## 🔧 Commands
 
 | Chat Command | Console Command | Description |
 |-------------|----------------|-------------|
@@ -57,137 +121,7 @@ This mod would not be possible without the amazing work of:
 | `!load <name>` | `css_load <name>` | Load saved position |
 | `!delete <name>` | `css_delete <name>` | Delete a saved position |
 
-## Prerequisites
-
-- Linux server running Counter-Strike 2 dedicated server (via SteamCMD)
-- [MetaMod](https://www.metamodsource.net/)
-- [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp)
-
-## Installation Guide
-
-### 1. Install CS2 Dedicated Server (if not already done)
-
-```bash
-# Create directory for steamcmd
-mkdir ~/steamcmd
-cd ~/steamcmd
-
-# Download and extract steamcmd
-wget https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz
-tar -xvzf steamcmd_linux.tar.gz
-
-# Run steamcmd and install CS2 server
-./steamcmd.sh
-```
-
-In the SteamCMD console:
-```
-force_install_dir ./cs2-server
-login anonymous
-app_update 730 validate
-quit
-```
-
-### 2. Install MetaMod
-
-```bash
-# Navigate to CS2 server directory
-cd ~/steamcmd/cs2-server/game/csgo
-
-# Create addons directory if it doesn't exist
-mkdir -p addons/metamod
-
-# Download MetaMod (replace VERSION with latest version)
-wget https://mms.alliedmods.net/mmsdrop/2.0/mmsource-2.0.0-git<VERSION>-linux.tar.gz
-tar -xvzf mmsource-2.0.0-git<VERSION>-linux.tar.gz -C addons/metamod
-```
-
-### 3. Install CounterStrikeSharp
-
-```bash
-# Navigate to CS2 server directory
-cd ~/steamcmd/cs2-server/game/csgo
-
-# Download CounterStrikeSharp (replace VERSION with latest version)
-wget https://github.com/roflmuffin/CounterStrikeSharp/releases/download/v<VERSION>/CounterStrikeSharp-linux-x64.zip
-unzip CounterStrikeSharp-linux-x64.zip
-```
-
-### 4. Install Practice Mod
-
-```bash
-# Navigate to CounterStrikeSharp plugins directory
-cd ~/steamcmd/cs2-server/game/csgo/addons/counterstrikesharp/plugins
-
-# Create directory for practice mod
-mkdir cs2-practice-mod
-cd cs2-practice-mod
-
-# Copy the practice mod files here
-# You can use SFTP, SCP, or other file transfer methods
-```
-
-### 5. Configure the Server
-
-Add these lines to your `gameinfo.gi` file (usually in `cs2-server/game/csgo/gameinfo.gi`):
-```
-Game    csgo
-engine  Source 2
-
-FileSystem
-{
-    SearchPaths
-    {
-        Game    csgo
-        AddonsFolder addons
-    }
-}
-```
-
-### 6. Start the Server
-
-```bash
-cd ~/steamcmd/cs2-server
-./cs2-server -game csgo -console -usercon +game_type 0 +game_mode 1 +map de_dust2
-```
-
-## Linux Server Installation
-
-1. **Prerequisites**
-   ```bash
-   # Install .NET 7.0 SDK
-   wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
-   sudo dpkg -i packages-microsoft-prod.deb
-   sudo apt-get update
-   sudo apt-get install -y dotnet-sdk-7.0
-   ```
-
-2. **Install CounterStrikeSharp**
-   - Download the latest release from [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp/releases)
-   - Extract to your CS2 server directory
-   ```bash
-   # In CS2 server directory
-   tar -xf counterstrikesharp.tar.gz
-   ```
-
-3. **Install the Mod**
-   ```bash
-   # In game/csgo/addons/counterstrikesharp/plugins
-   git clone https://github.com/your-repo/CS2PracticeMod.git
-   cd CS2PracticeMod
-   dotnet build
-   ```
-
-4. **Server Configuration**
-   - Add these lines to `game/csgo/cfg/server.cfg`:
-   ```cfg
-   // Allow mod commands
-   sv_cheats 1
-   sv_allowupload 1
-   sv_allowdownload 1
-   ```
-
-## Configuration
+## ⚙️ Configuration
 
 The `config.json` file is automatically created on first launch with default settings:
 ```json
@@ -198,16 +132,17 @@ The `config.json` file is automatically created on first launch with default set
 }
 ```
 
-## Dependencies
+## 👥 Contributing
 
-- CounterStrikeSharp (v80 or higher)
-- .NET 7.0 SDK
-- MetaMod:Source
+Contributions are welcome! Feel free to submit issues or pull requests.
 
-## Support
+## 📜 License
 
-To report bugs or suggest features, please create an issue on the GitHub repository.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## License
+## 🙏 Credits
 
-This project is licensed under the MIT License. See the `LICENSE` file for details.
+This mod would not be possible without the amazing work of:
+- **splewis** - Creator of the original [Practice Mode](https://github.com/splewis/csgo-practice-mode) plugin for CS:GO/SourceMod
+- **roflmuffin** - Developer of [CounterStrikeSharp](https://github.com/roflmuffin/CounterStrikeSharp)
+- **MetaMod:Source Team** - For their [MetaMod:Source](https://www.sourcemm.net/) extension system
