@@ -1,0 +1,26 @@
+{
+  "MaxSavedPositions": 50,
+  "MaxSavedGrenades": 100,
+  "EnableAutoNoclip": true,
+  "BotSettings": {
+    "MaxBots": 10,
+    "DefaultTeam": "T",
+    "BotNames": [
+      "Practice Bot 1",
+      "Practice Bot 2",
+      "Practice Bot 3",
+      "Practice Bot 4",
+      "Practice Bot 5"
+    ]
+  },
+  "Commands": {
+    "PrefixChat": "!",
+    "PrefixConsole": "css_"
+  },
+  "Features": {
+    "EnableGrenadeTrajectories": true,
+    "EnablePositionSaving": true,
+    "EnableBotManagement": true,
+    "EnableNoclip": true
+  }
+}
